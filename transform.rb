@@ -50,7 +50,7 @@ Dir["data/*.csv"].each do |file|
 
 	CSV.foreach(file, { :headers => true }) do |row|
 		borrower_type = row["Borrower Type"]
-		expiration = row["Card Expiration Date"] || "01/01/01"
+		expiration = row["Card Expiration Date"] || "01/01/01" #Set a default expire date if missing. Something to look at later.
 		expiration = Date.strptime(expiration, "%m/%d/%Y").strftime("%m-%d-%y")
 		borrower = row["Borrower"] || "Missing Borrower"
 		address1 = "#{row["Address 1"]}$" || ""
@@ -63,7 +63,7 @@ Dir["data/*.csv"].each do |file|
 		state2 = "#{row["State2"]} " || ""
 		zip2 = row["Zip2"]
 		phone2 = row["Phone2"]
-		borrowerid = row["Borrower ID"] || "NO_BORROWER_ID#{borrower_type}#{$.}"
+		borrowerid = row["Borrower ID"] || "NO_BORROWER_ID#{borrower_type}#{$.}" # Again, something to look at after import
 		email = row["E-Mail Address"]
 
 
