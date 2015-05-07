@@ -41,42 +41,98 @@
 # 190 - Community (not in Jenzabar)
 # 191 - ILL (not in Jenzabar)
 
-# Borrower	Borrower Type	Borrower ID	Address 1	City1	State1	Zip1	Phone1	Address 2	City2	State2	Zip2	Phone2	E-Mail Address	Card Expiration Date
+# "Borrower","Borrower Type","Borrower ID","Address1","City1","State1","ZIP1","Phone1","Address2","City2","State2","ZIP2","Phone2","E-Mail Address","Card Expiration Date"
 
 require 'csv'
 require 'date'
 
+unique_ids = []
+
 Dir["data/*.csv"].each do |file|
 
-	CSV.foreach(file, { :headers => true }) do |row|
+	CSV.foreach(file, { :headers => true, :quote_char => '"' }) do |row|
+		rownum = "#{$.}"
 		borrower_type = row["Borrower Type"]
-		expiration = row["Card Expiration Date"] || "01/01/01" #Set a default expire date if missing. Something to look at later.
+		expiration = row["Card Expiration Date"] || "01/01/01"
 		expiration = Date.strptime(expiration, "%m/%d/%Y").strftime("%m-%d-%y")
 		borrower = row["Borrower"] || "Missing Borrower"
-		address1 = "#{row["Address 1"]}$" || ""
-		city1 = "#{row["City1"]}, " || ""
-		state1 = "#{row["State1"]} " || ""
-		zip1 = row["Zip1"]
+		unless row["Address1"].nil?
+			address1 = "#{row["Address1"].upcase}$"
+		end
+		unless row["City1"].nil?
+			city1 = "#{row["City1"].upcase},"
+		end
+		unless row["State1"].nil?
+			state1 = "#{row["State1"].upcase} "
+		end
+		zip1 = row["ZIP1"]
 		phone1 = row["Phone1"]
-		address2 = "#{row["Address 2"]}$" || ""
-		city2 = "#{row["City2"]}, " || ""
-		state2 = "#{row["State2"]} " || ""
-		zip2 = row["Zip2"]
+		unless row["Address2"].nil?
+			address2 = "#{row["Address2"].upcase}$"
+		end
+		unless row["City2"].nil?
+			city2 = "#{row["City2"].upcase},"
+		end
+		unless row["State2"].nil?
+			state2 = "#{row["State2"].upcase} "
+		end
+		zip2 = row["ZIP2"]
 		phone2 = row["Phone2"]
-		borrowerid = row["Borrower ID"] || "NO_BORROWER_ID#{borrower_type}#{$.}" # Again, something to look at after import
+		borrowerid = row["Borrower ID"] || "NO_BORROWER_ID#{borrower_type}#{$.}"
 		email = row["E-Mail Address"]
+		note = ""
 
+		# Add some notes if we saw weird cases
+		if (expiration == "01-01-01")
+			note << "Patron uses default expiration. "
+		end
+		if (borrower == "Missing Borrower")
+			note << "Patron missing 'borrower' (name) field. "
+		end
+		if (borrowerid.match('NO_BORROWER_ID'))
+			note << "Patron missing 'borrowerid' field. "
+		end
+		# Some records have names or other garbage instead of barcodes.
+		if (/^28501/.match(borrowerid).nil?)
+			note << "Patron barcode doesn't look like a barcode. "
+		end
+		# Many barcodes are repeated, and we need those to be unique
+		if unique_ids.include?(borrowerid)
+			borrowerid << rownum
+			note << "BorrowerID was not unique, padded with row number to force uniqueness. "
+		end
+		if [address1,city1,state1,zip1].join == ""
+			note << "No address1 information present. "
+		end
 
+		# Having made it through, stuff borrowerid into the list of uniques
+		unique_ids.unshift borrowerid
 
-	  puts "0#{borrower_type}7-00077b  --#{expiration}"
-	  puts "n#{borrower}"
-		puts "h#{address1}#{city1}#{state1}#{zip1}"
-	  puts "p#{phone1}"
-		puts "a#{address2}#{city2}#{state2}#{zip2}"
-		puts "t#{phone2}"
-	  puts "d77b"
-	  puts "u#{borrowerid}occ"
-	  puts "b#{borrowerid}"
-	  puts "z#{email}"
+		record = "0#{borrower_type}7-00077b  --#{expiration}\n"
+		record << "n#{borrower}\n"
+		unless [address1,city1,state1,zip1].join == ""
+			record << "h#{address1}#{city1}#{state1}#{zip1}\n"
+		end
+		unless phone1.nil?
+			record << "p#{phone1}\n"
+		end
+		unless [address2,city2,state2,zip2].join == ""
+			record << "a#{address2}#{city2}#{state2}#{zip2}\n"
+		end
+		unless phone2.nil?
+			record << "t#{phone2}\n"
+		end
+		record << "d77b\n"
+		record << "u#{borrowerid}occ\n"
+		record << "b#{borrowerid}\n"
+		unless email.nil?
+			record << "z#{email}\n"
+		end
+		unless note == ""
+				record << "x#{note}\n"
+		end
+
+		puts record
+
 	end
 end
